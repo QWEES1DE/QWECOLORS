@@ -16,7 +16,7 @@
 
   const defaults = {
     enabled: true, presetId: null, settings: CM.neutralSettings(), userPresets: [],
-    scope: 'everywhere', apps: ['RobloxPlayerBeta.exe'], autostart: false, startMinimized: false,
+    scope: 'everywhere', apps: [], autostart: false, startMinimized: false,
     closeToTray: true, hotkeys: true,
   };
   let data;

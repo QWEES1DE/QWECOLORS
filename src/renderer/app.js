@@ -176,7 +176,7 @@
       $('enginePillText').textContent = api.isDesktop ? 'режим предпросмотра' : 'веб-демо';
       list.append(el('li', { class: 'warn' }, el('span', { class: 'dot' }),
         el('div', {}, el('b', {}, api.isDesktop ? 'Движок доступен только в Windows' : 'Это веб-демо'),
-          el('div', { class: 'desc' }, 'Ползунки и код работают. Чтобы цвета менялись на всём экране, запустите QWECOLORS для Windows и вставьте туда код.'))));
+          el('div', { class: 'desc' }, 'Ползунки работают. Чтобы цвета менялись на всём экране, запустите QWECOLORS для Windows.'))));
       return;
     }
 
@@ -331,7 +331,6 @@
       if (state.apps.some((a) => a.toLowerCase() === n.toLowerCase())) { toast('Уже в списке'); return; }
       api.update({ apps: state.apps.concat([n]) }).then(onState);
     };
-    $('btnAddApp').addEventListener('click', () => { addApp($('appInput').value); $('appInput').value = ''; });
     $('appInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { addApp($('appInput').value); $('appInput').value = ''; } });
     $('btnPickApp').addEventListener('click', async () => {
       if (!api.isDesktop) { toast('Доступно в приложении для Windows'); return; }
@@ -343,7 +342,7 @@
       const exe = await api.pickForeground();
       clearInterval(t);
       btn.disabled = false;
-      btn.textContent = 'Выбрать окно';
+      btn.textContent = 'Определить окно';
       if (exe) { addApp(exe); toast(`Добавлено: ${exe}`); } else toast('Не удалось определить окно');
     });
 

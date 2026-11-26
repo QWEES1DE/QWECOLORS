@@ -10,7 +10,7 @@ const DEFAULTS = {
   settings: CM.neutralSettings(),
   userPresets: [],
   scope: 'everywhere',          // everywhere | apps
-  apps: ['RobloxPlayerBeta.exe'],
+  apps: [],
   autostart: false,
   startMinimized: false,
   closeToTray: true,

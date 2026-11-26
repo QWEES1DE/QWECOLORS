@@ -93,9 +93,8 @@
           <div class="apps-box" id="appsBox" hidden>
             <div class="app-chips" id="appChips"></div>
             <div class="field-row">
-              <input class="input" id="appInput" placeholder="Например: RobloxPlayerBeta.exe" spellcheck="false" />
-              <button class="btn" id="btnAddApp">Добавить</button>
-              <button class="btn ghost" id="btnPickApp" title="Нажмите и за 3 секунды переключитесь в игру">Выбрать окно</button>
+              <input class="input" id="appInput" placeholder="Например: ROB RUN.exe" spellcheck="false" />
+              <button class="btn ghost" id="btnPickApp" title="Нажмите и за 3 секунды переключитесь в игру — её exe добавится сам">Определить окно</button>
             </div>
             <div class="muted small" id="fgInfo"></div>
           </div>
@@ -110,7 +109,6 @@
           <ul class="engine-list" id="engineList"></ul>
           <div class="settings-actions">
             <button class="btn ghost" id="btnUnlockGamma" title="Разрешает Windows более сильные изменения гамма-рампы. Нужны права администратора и перезагрузка.">Снять ограничение гаммы Windows</button>
-            <button class="btn ghost danger" id="btnReset">Сбросить в сток</button>
             <button class="btn ghost" id="btnQuit">Выйти из QWECOLORS</button>
           </div>
           <div class="form-msg" id="settingsMsg"></div>
@@ -135,7 +133,10 @@
 
         <div class="card sliders-card">
           <div id="sliders"></div>
-          <div class="sliders-foot muted small">Двойной клик по ползунку — вернуть значение по умолчанию.</div>
+          <div class="sliders-foot">
+            <span class="muted small">Двойной клик по ползунку — вернуть значение по умолчанию.</span>
+            <button class="btn ghost danger" id="btnReset">Сбросить в сток</button>
+          </div>
         </div>
 
       </section>

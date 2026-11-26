@@ -244,6 +244,7 @@
       syncSliders();
       preview.render(local);
     }
+    $('appVersion').textContent = s.version && s.version !== 'web' ? 'v' + s.version : '';
     renderStatus();
     renderPresets();
     renderEngine();

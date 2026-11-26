@@ -59,6 +59,7 @@ svg { display: block; }
 .brand-logo { width: 28px; height: 28px; border-radius: 8px; box-shadow: 0 0 0 1px rgba(255, 60, 80, 0.4), 0 0 18px rgba(255, 30, 60, 0.35); }
 .brand-name { font-weight: 800; letter-spacing: 0.06em; font-size: 15px; }
 .brand-name span { background: linear-gradient(90deg, #ff4655, #ff7a3d); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.brand-version { font-size: 11px; color: var(--muted-2); font-weight: 600; letter-spacing: 0.04em; }
 .titlebar-spacer { flex: 1; }
 .engine-pill {
   -webkit-app-region: no-drag;

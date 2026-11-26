@@ -3,12 +3,11 @@
 const fs = require('fs');
 const path = require('path');
 const CM = require('../shared/colormath');
-const { PRESETS } = require('../shared/presets');
 
 const DEFAULTS = {
   enabled: true,
-  presetId: 'robrun',
-  settings: { ...PRESETS[0].settings },
+  presetId: null,
+  settings: CM.neutralSettings(),
   userPresets: [],
   scope: 'everywhere',          // everywhere | apps
   apps: ['RobloxPlayerBeta.exe'],
@@ -74,7 +73,7 @@ function normalize(d) {
         id: String(p.id), name: String(p.name).slice(0, 32), hint: 'Свой пресет', settings: CM.sanitize(p.settings),
       }))
     : [];
-  out.presetId = d.presetId ? String(d.presetId) : null;
+  out.presetId = d.presetId && out.userPresets.some((p) => p.id === String(d.presetId)) ? String(d.presetId) : null;
   out.autostart = !!d.autostart;
   out.startMinimized = !!d.startMinimized;
   out.closeToTray = d.closeToTray !== false;

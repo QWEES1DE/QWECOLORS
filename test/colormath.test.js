@@ -31,8 +31,14 @@ test('температура 6500K нейтральна, тёплая умень
   assert.ok(cold[0] < 1 && Math.abs(cold[2] - 1) < 1e-9);
 });
 
-test('рампа монотонна для всех пресетов', () => {
-  for (const p of PR.PRESETS) {
+test('рампа монотонна для разных настроек', () => {
+  const samples = [
+    { id: 'a', settings: { vibrance: 85, saturation: 140, gamma: 1.1, shadowBoost: 0, contrast: 8, brightness: 3, temperature: 6700 } },
+    { id: 'b', settings: { vibrance: 75, saturation: 125, gamma: 1.45, shadowBoost: 60, contrast: 4, brightness: 8, temperature: 6900 } },
+    { id: 'c', settings: { vibrance: 100, saturation: 300, gamma: 2.5, shadowBoost: 100, contrast: 50, brightness: -50, temperature: 3000 } },
+    { id: 'd', settings: { vibrance: 0, saturation: 0, gamma: 0.5, shadowBoost: 0, contrast: -50, brightness: 50, temperature: 10000 } },
+  ];
+  for (const p of samples) {
     const c = CM.buildCurves(p.settings);
     for (const ch of ['r', 'g', 'b']) {
       for (let i = 1; i < 256; i++) assert.ok(c[ch][i] >= c[ch][i - 1] - 1e-6, `${p.id}/${ch}/${i}`);
@@ -52,17 +58,13 @@ test('вибрация NVIDIA: 50% = сток, 100% = максимум', () => {
   assert.strictEqual(CM.vibranceToAmd(100), 200);
 });
 
-test('код настроек: туда и обратно', () => {
-  for (const p of PR.PRESETS) {
-    const code = PR.encodeShareCode(p.settings);
-    assert.match(code, /^QWE1-[A-Z2-9]+$/);
-    assert.deepStrictEqual(PR.decodeShareCode(code), CM.sanitize(p.settings));
-    assert.deepStrictEqual(PR.decodeShareCode(' ' + code.toLowerCase() + ' '), CM.sanitize(p.settings));
-  }
-  const code = PR.encodeShareCode(PR.PRESETS[0].settings);
-  const broken = code.slice(0, -2) + (code.slice(-2) === 'AA' ? 'BB' : 'AA');
-  assert.throws(() => PR.decodeShareCode(broken));
-  assert.throws(() => PR.decodeShareCode('hello'));
+test('пользовательские пресеты: поиск и совпадение', () => {
+  const user = [{ id: 'user-1', name: 'Мой', settings: { saturation: 160, gamma: 1.2 } }];
+  assert.strictEqual(PR.findPreset('user-1', user).name, 'Мой');
+  assert.strictEqual(PR.findPreset('robrun', user), null);
+  assert.strictEqual(PR.findPreset(null, user), null);
+  assert.strictEqual(PR.matchPreset({ saturation: 160, gamma: 1.2 }, user).id, 'user-1');
+  assert.strictEqual(PR.matchPreset(CM.neutralSettings(), user), null);
 });
 
 test('processPixels: нейтральные настройки не меняют картинку', () => {

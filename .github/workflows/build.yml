@@ -24,7 +24,7 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Tests (цветовая математика, коды)
+      - name: Tests (цветовая математика)
         run: npm test
 
       - name: Smoke-test WinAPI bindings (koffi)

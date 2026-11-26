@@ -93,7 +93,6 @@
         local[def.key] = v;
         paintSlider(def, v);
         preview.render(local);
-        updateShareCode();
         sendSettings({ [def.key]: v });
       });
       input.addEventListener('dblclick', () => {
@@ -127,29 +126,22 @@
   function renderPresets() {
     const root = $('presetChips');
     root.textContent = '';
-    const all = PR.PRESETS.concat(state.userPresets || []);
+    const all = state.userPresets || [];
+    root.hidden = all.length === 0;
     for (const p of all) {
-      const isUser = p.id.startsWith('user-');
-      const chip = el('button', { class: 'chip' + (state.presetId === p.id ? ' on' : '') + (isUser ? ' user' : ''), title: p.hint || '' }, p.name);
+      const chip = el('button', { class: 'chip user' + (state.presetId === p.id ? ' on' : ''), title: 'Применить пресет' }, p.name);
       chip.addEventListener('click', () => api.update({ presetId: p.id }).then(onState));
-      if (isUser) {
-        const x = el('span', { class: 'x', title: 'Удалить пресет' }, '×');
-        x.addEventListener('click', (e) => {
-          e.stopPropagation();
-          api.deletePreset(p.id).then(onState);
-        });
-        chip.append(x);
-      }
+      const x = el('span', { class: 'x', title: 'Удалить пресет' }, '×');
+      x.addEventListener('click', (e) => {
+        e.stopPropagation();
+        api.deletePreset(p.id).then(onState);
+      });
+      chip.append(x);
       root.append(chip);
     }
-    const cur = PR.findPreset(state.presetId, state.userPresets);
-    $('presetHint').textContent = cur ? (cur.hint || '') : 'Свои настройки — сохраните их как пресет, чтобы не потерять.';
-  }
-
-  /* ---------------- Код ---------------- */
-
-  function updateShareCode() {
-    $('shareCode').textContent = PR.encodeShareCode(local);
+    $('presetHint').textContent = all.length === 0
+      ? 'Пока пусто. Настройте ползунки под себя и нажмите «+ Сохранить свой».'
+      : (PR.findPreset(state.presetId, all) ? '' : 'Текущие настройки не сохранены — нажмите «+ Сохранить свой», чтобы не потерять.');
   }
 
   /* ---------------- Статус ---------------- */
@@ -169,7 +161,7 @@
     const where = state.scope === 'everywhere'
       ? 'Везде'
       : (state.apps.length ? 'В играх: ' + state.apps.slice(0, 2).join(', ') + (state.apps.length > 2 ? ` +${state.apps.length - 2}` : '') : 'Список игр пуст');
-    $('statusSub').textContent = where + (preset ? ' · Пресет ' + preset.name : ' · Свои настройки');
+    $('statusSub').textContent = where + (preset ? ' · Пресет ' + preset.name : '');
   }
 
   function renderEngine() {
@@ -251,7 +243,6 @@
       local = CM.sanitize(s.settings);
       syncSliders();
       preview.render(local);
-      updateShareCode();
     }
     renderStatus();
     renderPresets();
@@ -311,27 +302,6 @@
       preview.load(url).then(() => { setSeg('file'); URL.revokeObjectURL(url); }).catch(() => toast('Не удалось открыть картинку'));
       $('fileInput').value = '';
     });
-
-    // Код
-    $('btnCopyCode').addEventListener('click', async () => {
-      await api.copy($('shareCode').textContent);
-      toast('Код скопирован');
-    });
-    const applyCode = async () => {
-      let text = $('shareInput').value.trim();
-      if (!text) { text = (await api.paste() || '').trim(); $('shareInput').value = text; }
-      try {
-        const s = PR.decodeShareCode(text);
-        onState(await api.update({ settings: s }));
-        msg($('shareMsg'), 'Код применён ✓', true);
-        $('shareInput').value = '';
-      } catch (e) {
-        msg($('shareMsg'), e.message, false);
-      }
-    };
-    $('btnApplyCode').addEventListener('click', applyCode);
-    $('shareInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') applyCode(); });
-    $('shareInput').addEventListener('input', () => msg($('shareMsg'), ''));
 
     // Сохранение пресета
     const row = $('savePresetRow');

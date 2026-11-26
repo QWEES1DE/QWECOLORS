@@ -16,7 +16,6 @@
       <div class="brand">
         <img class="brand-logo" src="assets/logo.png" alt="" />
         <span class="brand-name">QWE<span>COLORS</span></span>
-        <span class="badge-pro">ПРО</span>
       </div>
       <div class="titlebar-spacer"></div>
       <div class="engine-pill" id="enginePill" title="Состояние движка">
@@ -41,8 +40,8 @@
         <div class="card status-card" id="statusCard">
           <div class="status-info">
             <div class="status-label" id="statusLabel">АКТИВНО</div>
-            <div class="status-title"><span class="status-dot" id="statusDot"></span><span id="statusTitle">Rob Run</span></div>
-            <div class="status-sub" id="statusSub">Везде · Пресет Rob Run</div>
+            <div class="status-title"><span class="status-dot" id="statusDot"></span><span id="statusTitle">Свои настройки</span></div>
+            <div class="status-sub" id="statusSub">Везде</div>
             <div class="status-actions">
               <button class="btn ghost small" id="btnPeek" title="Пока кнопка зажата — экран показывается без эффекта">
                 <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -92,7 +91,7 @@
           </div>
           <div class="apps-box" id="appsBox" hidden>
             <div class="app-chips" id="appChips"></div>
-            <div class="share-row">
+            <div class="field-row">
               <input class="input" id="appInput" placeholder="Например: RobloxPlayerBeta.exe" spellcheck="false" />
               <button class="btn" id="btnAddApp">Добавить</button>
               <button class="btn ghost" id="btnPickApp" title="Нажмите и за 3 секунды переключитесь в игру">Выбрать окно</button>
@@ -121,7 +120,7 @@
       <section class="col col-right">
         <div class="card presets-card">
           <div class="card-head">
-            <h3 class="eyebrow">ПРЕСЕТЫ</h3>
+            <h3 class="eyebrow">МОИ ПРЕСЕТЫ</h3>
             <button class="btn ghost small" id="btnSavePreset">+ Сохранить свой</button>
           </div>
           <div class="chips" id="presetChips"></div>
@@ -138,21 +137,6 @@
           <div class="sliders-foot muted small">Двойной клик по ползунку — вернуть значение по умолчанию.</div>
         </div>
 
-        <div class="card share-card">
-          <div class="card-head">
-            <h3>Код настроек</h3>
-            <span class="muted small">Поделитесь с друзьями — код вставляется прямо в QWECOLORS</span>
-          </div>
-          <div class="share-row">
-            <code class="share-code" id="shareCode">QWE1-…</code>
-            <button class="btn" id="btnCopyCode">Копировать</button>
-          </div>
-          <div class="share-row">
-            <input class="input" id="shareInput" placeholder="Вставьте код QWE1-…" spellcheck="false" autocomplete="off" />
-            <button class="btn accent" id="btnApplyCode">Применить</button>
-          </div>
-          <div class="form-msg" id="shareMsg"></div>
-        </div>
       </section>
     </main>
 

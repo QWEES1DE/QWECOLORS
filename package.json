@@ -1,0 +1,82 @@
+{
+  "name": "qwecolors",
+  "productName": "QWECOLORS",
+  "version": "1.0.0",
+  "description": "QWECOLORS — насыщенность до 300%, цифровая вибрация, тени и цветовая температура по всему экрану Windows",
+  "main": "src/main/main.js",
+  "author": "QWEES1DE",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "web": "node scripts/serve-web.js",
+    "test": "node --test test/*.test.js",
+    "dist": "electron-builder --win nsis portable --x64",
+    "dist:dir": "electron-builder --win dir --x64"
+  },
+  "dependencies": {
+    "koffi": "^2.16.4"
+  },
+  "devDependencies": {
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0"
+  },
+  "homepage": "https://github.com/QWEES1DE/QWECOLORS",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/QWEES1DE/QWECOLORS.git"
+  },
+  "build": {
+    "appId": "com.qwees1de.qwecolors",
+    "productName": "QWECOLORS",
+    "copyright": "© QWEES1DE",
+    "directories": {
+      "buildResources": "resources",
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!node_modules/koffi/src/**",
+      "!node_modules/koffi/vendor/**",
+      "!node_modules/koffi/doc/**",
+      "!node_modules/koffi/build/koffi/{darwin,freebsd,linux,musl,openbsd}_*/**"
+    ],
+    "asarUnpack": [
+      "node_modules/koffi/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "resources/icon.ico",
+      "executableName": "QWECOLORS",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "QWECOLORS",
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico",
+      "artifactName": "QWECOLORS-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "QWECOLORS-${version}-portable.${ext}"
+    }
+  }
+}

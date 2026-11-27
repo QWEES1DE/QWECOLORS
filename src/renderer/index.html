@@ -10,135 +10,190 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app" id="app">
-    <!-- Заголовок окна -->
-    <header class="titlebar">
-      <div class="brand">
-        <img class="brand-logo" src="assets/logo.png" alt="" />
-        <span class="brand-name">QWE<span>COLORS</span></span>
-        <span class="brand-version" id="appVersion"></span>
+  <div class="shell" id="app">
+
+    <!-- Боковая панель -->
+    <nav class="rail">
+      <div class="rail-logo" title="QWECOLORS">
+        <img src="assets/logo.png" alt="QWECOLORS" />
       </div>
-      <div class="titlebar-spacer"></div>
-      <div class="engine-pill" id="enginePill" title="Состояние движка">
-        <span class="dot"></span><span id="enginePillText">движок</span>
+      <div class="rail-nav" role="tablist">
+        <button class="rail-btn on" data-view="color" role="tab" title="Цвет">
+          <svg viewBox="0 0 24 24"><path d="M5 4v16M12 4v16M19 4v16"/><rect x="3" y="13" width="4" height="3" rx="1"/><rect x="10" y="7" width="4" height="3" rx="1"/><rect x="17" y="10" width="4" height="3" rx="1"/></svg>
+          <span>Цвет</span>
+        </button>
+        <button class="rail-btn" data-view="games" role="tab" title="Игры">
+          <svg viewBox="0 0 24 24"><path d="M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.6 1.4L15 14H9l-1.4 1.9A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4z"/><path d="M8 11.5v3M6.5 13h3"/><circle cx="15.5" cy="12.5" r=".6"/><circle cx="17.5" cy="14" r=".6"/></svg>
+          <span>Игры</span>
+        </button>
+        <button class="rail-btn" data-view="system" role="tab" title="Система">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.2 6.5l2.6 1.5M17.2 16l2.6 1.5M4.2 17.5l2.6-1.5M17.2 8l2.6-1.5"/></svg>
+          <span>Система</span>
+          <i class="rail-badge" id="engineBadge"></i>
+        </button>
       </div>
-      <div class="win-controls" id="winControls">
-        <button class="win-btn" id="btnMin" title="Свернуть" aria-label="Свернуть">
-          <svg viewBox="0 0 12 12"><path d="M2 6h8" /></svg>
-        </button>
-        <button class="win-btn" id="btnMax" title="Развернуть" aria-label="Развернуть">
-          <svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" rx="1" /></svg>
-        </button>
-        <button class="win-btn close" id="btnClose" title="Закрыть в трей" aria-label="Закрыть">
-          <svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" /></svg>
-        </button>
+      <div class="rail-foot">
+        <div class="rail-led" id="railLed" title="Состояние эффекта"></div>
+        <div class="rail-version" id="appVersion"></div>
+      </div>
+    </nav>
+
+    <!-- Верхняя панель -->
+    <header class="topbar">
+      <div class="title">
+        <div class="title-app">QWE<b>COLORS</b></div>
+        <div class="title-view" id="viewTitle">Цвет</div>
+      </div>
+      <div class="topbar-spacer"></div>
+
+      <div class="state" id="stateBox">
+        <div class="state-text">
+          <div class="state-main" id="stateMain">ЭФФЕКТ АКТИВЕН</div>
+          <div class="state-sub" id="stateSub">Везде</div>
+        </div>
+      </div>
+
+      <button class="hold" id="btnPeek" title="Пока зажато — экран без эффекта">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17A8.5 8.5 0 0 0 12 3.5z" class="half"/></svg>
+        <span>Сток</span>
+      </button>
+
+      <button class="switch" id="btnPower" role="switch" aria-checked="true" title="Включить / выключить (Ctrl+Alt+Q)">
+        <span class="switch-label off">ВЫКЛ</span>
+        <span class="switch-label on">ВКЛ</span>
+        <span class="switch-knob"></span>
+      </button>
+
+      <div class="win" id="winControls">
+        <button class="win-btn" id="btnMin" aria-label="Свернуть"><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></button>
+        <button class="win-btn" id="btnMax" aria-label="Развернуть"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></button>
+        <button class="win-btn close" id="btnClose" aria-label="Закрыть"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
       </div>
     </header>
 
-    <main class="layout">
-      <!-- Левая колонка -->
-      <section class="col col-left">
-        <div class="card status-card" id="statusCard">
-          <div class="status-info">
-            <div class="status-label" id="statusLabel">АКТИВНО</div>
-            <div class="status-title"><span class="status-dot" id="statusDot"></span><span id="statusTitle">Свои настройки</span></div>
-            <div class="status-sub" id="statusSub">Везде</div>
-            <div class="status-actions">
-              <button class="btn ghost small" id="btnPeek" title="Пока кнопка зажата — экран показывается без эффекта">
-                <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-                Удерживайте — сток
-              </button>
-              <span class="hotkey-hint">Ctrl+Alt+Q — вкл/выкл</span>
-            </div>
-          </div>
-          <button class="power" id="btnPower" aria-pressed="true" title="Включить / выключить (Ctrl+Alt+Q)">
-            <span class="power-ring"></span>
-            <svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
-            <span class="power-text" id="powerText">ВКЛ</span>
-          </button>
-        </div>
+    <!-- Содержимое -->
+    <main class="content">
 
-        <div class="card preview-card">
-          <div class="compare" id="compare">
-            <canvas id="canvasAfter"></canvas>
-            <canvas id="canvasBefore"></canvas>
-            <div class="compare-label left">СТОК</div>
-            <div class="compare-label right">QWECOLORS</div>
-            <div class="compare-line" id="compareLine">
-              <div class="compare-handle">
-                <svg viewBox="0 0 24 24"><path d="M9 6l-6 6 6 6M15 6l6 6-6 6"/></svg>
+      <!-- ===== ЦВЕТ ===== -->
+      <section class="view on" id="view-color">
+        <div class="color-grid">
+
+          <div class="panel monitor-panel">
+            <div class="panel-bar">
+              <span class="panel-title">Предпросмотр</span>
+              <div class="tabs" id="compareMode">
+                <button data-mode="split" class="on">Сплит</button>
+                <button data-mode="before">До</button>
+                <button data-mode="after">После</button>
               </div>
             </div>
-            <div class="compare-loading" id="compareLoading">Загрузка…</div>
-          </div>
-          <div class="preview-toolbar">
-            <div class="seg" id="previewSource">
-              <button data-src="sample" class="on">Пример</button>
-              <button data-src="screen">Снимок экрана</button>
-              <button data-src="file">Своя картинка</button>
+            <div class="monitor" id="compare">
+              <canvas id="canvasAfter"></canvas>
+              <canvas id="canvasBefore"></canvas>
+              <div class="split-line" id="compareLine"><span class="split-grip"></span></div>
+              <div class="mon-tag left" id="tagBefore"><i></i>ДО</div>
+              <div class="mon-tag right" id="tagAfter"><i></i>ПОСЛЕ</div>
+              <div class="mon-loading" id="compareLoading">Загрузка…</div>
             </div>
-            <input type="file" id="fileInput" accept="image/*" hidden />
-          </div>
-          <p class="muted small" id="previewNote">
-            Тяните картинку, чтобы сравнить. Вибрация здесь аппроксимирована — в приложении её делает драйвер видеокарты.
-          </p>
-        </div>
-
-        <div class="card settings-card">
-          <div class="card-head"><h3>Где работает</h3></div>
-          <div class="seg wide" id="scopeSeg">
-            <button data-scope="everywhere">Везде</button>
-            <button data-scope="apps">Только в выбранных играх</button>
-          </div>
-          <div class="apps-box" id="appsBox" hidden>
-            <div class="app-chips" id="appChips"></div>
-            <div class="field-row">
-              <input class="input" id="appInput" placeholder="Например: ROB RUN.exe" spellcheck="false" />
-              <button class="btn ghost" id="btnPickApp" title="Нажмите и за 3 секунды переключитесь в игру — её exe добавится сам">Определить окно</button>
+            <div class="panel-bar bottom">
+              <div class="tabs small" id="previewSource">
+                <button data-src="sample" class="on">Пример</button>
+                <button data-src="screen">Снимок экрана</button>
+                <button data-src="file">Файл…</button>
+              </div>
+              <input type="file" id="fileInput" accept="image/*" hidden />
+              <span class="hint" id="previewNote"></span>
             </div>
-            <div class="muted small" id="fgInfo"></div>
           </div>
 
-          <div class="card-head spaced"><h3>Приложение</h3></div>
-          <label class="toggle"><input type="checkbox" id="optAutostart" /><span class="track"></span><span>Запускать вместе с Windows</span></label>
-          <label class="toggle"><input type="checkbox" id="optStartMin" /><span class="track"></span><span>Запускать свёрнутым в трей</span></label>
-          <label class="toggle"><input type="checkbox" id="optTray" /><span class="track"></span><span>Кнопка «закрыть» сворачивает в трей</span></label>
-          <label class="toggle"><input type="checkbox" id="optHotkeys" /><span class="track"></span><span>Горячие клавиши: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd> вкл/выкл, <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>PgUp</kbd>/<kbd>PgDn</kbd> — пресеты</span></label>
-
-          <div class="card-head spaced"><h3>Движок</h3></div>
-          <ul class="engine-list" id="engineList"></ul>
-          <div class="settings-actions">
-            <button class="btn ghost" id="btnUnlockGamma" title="Разрешает Windows более сильные изменения гамма-рампы. Нужны права администратора и перезагрузка.">Снять ограничение гаммы Windows</button>
-            <button class="btn ghost" id="btnQuit">Выйти из QWECOLORS</button>
+          <div class="panel mixer-panel">
+            <div class="panel-bar">
+              <span class="panel-title">Микшер</span>
+              <span class="hint" id="channelInfo">Наведите на канал — здесь появится описание</span>
+            </div>
+            <div class="mixer" id="mixer"></div>
+            <div class="panel-bar bottom">
+              <span class="hint">Двойной клик по фейдеру — сброс канала · колесо мыши — точная настройка</span>
+              <button class="btn danger" id="btnReset">Сбросить в сток</button>
+            </div>
           </div>
-          <div class="form-msg" id="settingsMsg"></div>
+
+          <div class="panel bank-panel">
+            <div class="panel-bar">
+              <span class="panel-title">Мои пресеты</span>
+              <span class="hint" id="bankHint"></span>
+            </div>
+            <div class="bank" id="bank"></div>
+          </div>
+
         </div>
       </section>
 
-      <!-- Правая колонка -->
-      <section class="col col-right">
-        <div class="card presets-card">
-          <div class="card-head">
-            <h3 class="eyebrow">МОИ ПРЕСЕТЫ</h3>
-            <button class="btn ghost small" id="btnSavePreset">+ Сохранить свой</button>
+      <!-- ===== ИГРЫ ===== -->
+      <section class="view" id="view-games">
+        <div class="stack">
+          <div class="panel">
+            <div class="panel-bar"><span class="panel-title">Где работает эффект</span></div>
+            <div class="options" id="scopeOptions">
+              <button class="option" data-scope="everywhere">
+                <span class="option-radio"></span>
+                <span class="option-body">
+                  <b>Везде</b>
+                  <small>Рабочий стол, браузер и все игры — эффект включён постоянно.</small>
+                </span>
+              </button>
+              <button class="option" data-scope="apps">
+                <span class="option-radio"></span>
+                <span class="option-body">
+                  <b>Только в выбранных играх</b>
+                  <small>Эффект включается сам, когда активно окно игры из списка ниже.</small>
+                </span>
+              </button>
+            </div>
           </div>
-          <div class="chips" id="presetChips"></div>
-          <div class="save-preset" id="savePresetRow" hidden>
-            <input class="input" id="presetName" maxlength="32" placeholder="Название пресета" />
-            <button class="btn accent" id="btnSavePresetOk">Сохранить</button>
-            <button class="btn ghost" id="btnSavePresetCancel">Отмена</button>
-          </div>
-          <div class="preset-hint muted small" id="presetHint"></div>
-        </div>
 
-        <div class="card sliders-card">
-          <div id="sliders"></div>
-          <div class="sliders-foot">
-            <span class="muted small">Двойной клик по ползунку — вернуть значение по умолчанию.</span>
-            <button class="btn ghost danger" id="btnReset">Сбросить в сток</button>
+          <div class="panel" id="appsPanel">
+            <div class="panel-bar">
+              <span class="panel-title">Список игр</span>
+              <span class="hint" id="fgInfo"></span>
+            </div>
+            <div class="app-list" id="appList"></div>
+            <div class="row">
+              <input class="input" id="appInput" placeholder="Например: ROB RUN.exe" spellcheck="false" autocomplete="off" />
+              <button class="btn" id="btnPickApp" title="Нажмите и за 3 секунды переключитесь в игру — её exe добавится сам">Определить окно</button>
+            </div>
+            <div class="hint pad">Впишите имя exe и нажмите Enter, или нажмите «Определить окно» и за 3 секунды переключитесь в игру.</div>
           </div>
         </div>
+      </section>
 
+      <!-- ===== СИСТЕМА ===== -->
+      <section class="view" id="view-system">
+        <div class="stack">
+          <div class="panel">
+            <div class="panel-bar"><span class="panel-title">Приложение</span></div>
+            <div class="settings">
+              <label class="setting"><span><b>Запуск вместе с Windows</b><small>QWECOLORS стартует при входе в систему</small></span><input type="checkbox" id="optAutostart" /><i class="sw"></i></label>
+              <label class="setting"><span><b>Запускать свёрнутым</b><small>Сразу в трей, без окна</small></span><input type="checkbox" id="optStartMin" /><i class="sw"></i></label>
+              <label class="setting"><span><b>Закрывать в трей</b><small>Крестик прячет окно, эффект продолжает работать</small></span><input type="checkbox" id="optTray" /><i class="sw"></i></label>
+              <label class="setting"><span><b>Горячие клавиши</b><small>Работают даже в игре</small></span><input type="checkbox" id="optHotkeys" /><i class="sw"></i></label>
+            </div>
+            <div class="keys">
+              <div><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>Q</kbd><span>включить / выключить</span></div>
+              <div><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>PgUp</kbd><kbd>PgDn</kbd><span>переключить свои пресеты</span></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-bar"><span class="panel-title">Движок</span><span class="hint" id="engineSummary"></span></div>
+            <div class="modules" id="engineList"></div>
+            <div class="row wrap">
+              <button class="btn" id="btnUnlockGamma" title="Разрешает Windows более сильные изменения гамма-рампы. Нужны права администратора и перезагрузка.">Снять ограничение гаммы Windows</button>
+              <button class="btn" id="btnQuit">Выйти из QWECOLORS</button>
+            </div>
+            <div class="form-msg" id="settingsMsg"></div>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -149,6 +204,7 @@
   <script src="../shared/presets.js"></script>
   <script src="demo-backend.js"></script>
   <script src="preview.js"></script>
+  <script src="fader.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

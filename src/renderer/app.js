@@ -6,28 +6,38 @@
   const api = window.qwe;
   const $ = (id) => document.getElementById(id);
 
-  const SLIDERS = [
-    { key: 'vibrance', name: 'Вибрация', tag: ['driver', 'драйвер'],
-      sub: 'Цифровая вибрация видеокарты · работает и в полноэкранном режиме',
-      fmt: (v) => `${Math.round(v)}%` },
-    { key: 'saturation', name: 'Насыщенность', tag: ['beyond', 'за пределами'],
-      sub: 'Выходит за пределы драйвера — до 300%',
-      fmt: (v) => `${Math.round(v)}%` },
-    { key: 'gamma', name: 'Тени (гамма)', sub: 'Больше 1 — светлее тёмные участки',
-      fmt: (v) => v.toFixed(2) },
-    { key: 'shadowBoost', name: 'Усиление теней', tag: ['new', 'new'],
-      sub: 'Вытягивает тёмные углы, не трогая светлые',
-      fmt: (v) => (v === 0 ? 'Выкл' : `${Math.round(v)}%`) },
-    { key: 'contrast', name: 'Контраст', fmt: (v) => (v > 0 ? `+${v}` : `${v}`) },
-    { key: 'brightness', name: 'Яркость', fmt: (v) => (v > 0 ? `+${v}` : `${v}`) },
-    { key: 'temperature', name: 'Температура', sub: 'Меньше — теплее, больше — холоднее', cls: 'temp',
-      fmt: (v) => `${Math.round(v)}K` },
+  const signed = (v) => (v > 0 ? `+${v}` : `${v}`);
+  const CHANNELS = [
+    { key: 'vibrance', name: 'Вибра\u00ADция', tag: ['drv', 'ДРАЙВЕР'],
+      desc: 'Цифровая вибрация видеокарты (NVIDIA / AMD). 50% — как в стоке. Работает и в полноэкранных играх.',
+      fmt: (v) => [Math.round(v), '%'] },
+    { key: 'saturation', name: 'Насыщен­ность', tag: ['hot', 'ДО 300%'],
+      desc: 'Насыщенность всего экрана — выходит за пределы драйвера, до 300%.',
+      fmt: (v) => [Math.round(v), '%'] },
+    { key: 'gamma', name: 'Тени', tag: ['', 'ГАММА'],
+      desc: 'Гамма теней: больше 1 — тёмные участки светлее, меньше 1 — глубже.',
+      fmt: (v) => [v.toFixed(2), ''] },
+    { key: 'shadowBoost', name: 'Подъём теней', tag: ['', 'BOOST'],
+      desc: 'Вытягивает тёмные углы и переулки, почти не трогая светлые участки.',
+      fmt: (v) => (v === 0 ? ['ВЫКЛ', ''] : [Math.round(v), '%']) },
+    { key: 'contrast', name: 'Конт\u00ADраст', tag: ['', ''],
+      desc: 'Контраст вокруг середины яркости.',
+      fmt: (v) => [signed(v), ''] },
+    { key: 'brightness', name: 'Яркость', tag: ['', ''],
+      desc: 'Общая яркость изображения.',
+      fmt: (v) => [signed(v), ''] },
+    { key: 'temperature', name: 'Темпе­ратура', tag: ['', 'KELVIN'], cls: 'temp',
+      desc: 'Цветовая температура: ниже 6500K — теплее, выше — холоднее.',
+      fmt: (v) => [Math.round(v), 'K'] },
   ];
+
+  const VIEW_TITLES = { color: 'Цвет', games: 'Игры', system: 'Система' };
 
   let state = null;
   let local = CM.neutralSettings();
-  const inputs = {};
+  const channels = {};
   let preview;
+  let editingSlot = false;
 
   /* ---------------- Утилиты ---------------- */
 
@@ -50,13 +60,13 @@
     for (const [k, v] of Object.entries(attrs || {})) {
       if (k === 'class') e.className = v;
       else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
-      else if (v !== undefined && v !== null) e.setAttribute(k, v);
+      else if (v !== undefined && v !== null && v !== false) e.setAttribute(k, v);
     }
     for (const c of children) if (c != null) e.append(c);
     return e;
   }
 
-  // Отправка в главный процесс не чаще ~40 раз/с, последнее значение — всегда
+  // Отправка в главный процесс не чаще ~40 раз/с
   let sendTimer = null, sendPatch = {};
   function sendSettings(patch) {
     Object.assign(sendPatch, patch);
@@ -67,204 +77,254 @@
     }, 25);
   }
 
-  /* ---------------- Ползунки ---------------- */
+  /* ---------------- Навигация ---------------- */
 
-  function buildSliders() {
-    const root = $('sliders');
-    for (const def of SLIDERS) {
+  function showView(name) {
+    document.querySelectorAll('.rail-btn').forEach((b) => b.classList.toggle('on', b.dataset.view === name));
+    document.querySelectorAll('.view').forEach((v) => v.classList.toggle('on', v.id === 'view-' + name));
+    $('viewTitle').textContent = VIEW_TITLES[name];
+    $('app').querySelector('.content').scrollTop = 0;
+  }
+
+  /* ---------------- Микшер ---------------- */
+
+  function buildMixer() {
+    const root = $('mixer');
+    const info = $('channelInfo');
+    const defaultInfo = info.textContent;
+    for (const def of CHANNELS) {
       const L = CM.LIMITS[def.key];
-      const input = el('input', {
-        type: 'range', min: L.min, max: L.max, step: L.step, value: L.neutral,
-        class: def.cls || '', 'aria-label': def.name,
+      const val = el('div', { class: 'ch-val' });
+      const fader = new window.QWEFader({
+        min: L.min, max: L.max, step: L.step, neutral: L.neutral, value: L.neutral,
+        className: def.cls, label: def.name.replace(/\u00AD/g, ''),
+        onInput: (v) => {
+          local[def.key] = v;
+          paintChannel(def.key);
+          preview.render(local);
+          sendSettings({ [def.key]: v });
+        },
       });
-      const value = el('div', { class: 'slider-value' });
-      const tag = def.tag ? el('span', { class: 'tag ' + def.tag[0] }, def.tag[1]) : null;
-      const row = el('div', { class: 'slider' },
-        el('div', { class: 'slider-top' },
-          el('div', {},
-            el('div', { class: 'slider-name' }, def.name, tag),
-            def.sub ? el('div', { class: 'slider-sub' }, def.sub) : null),
-          value),
-        input);
-      root.append(row);
-
-      input.addEventListener('input', () => {
-        const v = Number(input.value);
-        local[def.key] = v;
-        paintSlider(def, v);
-        preview.render(local);
-        sendSettings({ [def.key]: v });
-      });
-      input.addEventListener('dblclick', () => {
-        input.value = L.neutral;
-        input.dispatchEvent(new Event('input'));
-      });
-      inputs[def.key] = { input, value, def };
+      const ch = el('div', { class: 'ch', 'data-key': def.key },
+        val,
+        el('div', { class: 'ch-tag ' + def.tag[0] }, def.tag[1]),
+        fader.el,
+        el('div', { class: 'ch-name' }, def.name));
+      const showInfo = () => {
+        info.textContent = '';
+        info.append(el('b', {}, def.name.replace(/\u00AD/g, '') + ' — '), def.desc);
+      };
+      ch.addEventListener('mouseenter', showInfo);
+      ch.addEventListener('mouseleave', () => { if (!ch.classList.contains('focus')) info.textContent = defaultInfo; });
+      fader.el.addEventListener('focus', () => { ch.classList.add('focus'); showInfo(); });
+      fader.el.addEventListener('blur', () => { ch.classList.remove('focus'); info.textContent = defaultInfo; });
+      root.append(ch);
+      channels[def.key] = { def, fader, val, ch };
     }
   }
 
-  function paintSlider(def, v) {
-    const { input, value } = inputs[def.key];
-    const L = CM.LIMITS[def.key];
-    const p = ((v - L.min) / (L.max - L.min)) * 100;
-    input.style.setProperty('--p', p + '%');
-    value.textContent = def.fmt(v);
-    value.classList.toggle('dim', Math.abs(v - L.neutral) < 1e-6);
+  function paintChannel(key) {
+    const { def, val, ch } = channels[key];
+    const v = local[key];
+    const [num, unit] = def.fmt(v);
+    val.textContent = '';
+    val.append(String(num));
+    if (unit) val.append(el('small', {}, unit));
+    ch.classList.toggle('neutral', Math.abs(v - CM.LIMITS[key].neutral) < 1e-6);
   }
 
-  function syncSliders() {
-    for (const def of SLIDERS) {
-      const { input } = inputs[def.key];
-      const v = local[def.key];
-      if (document.activeElement !== input || !input.matches(':active')) input.value = v;
-      paintSlider(def, v);
+  function syncMixer() {
+    for (const key of Object.keys(channels)) {
+      const { fader } = channels[key];
+      if (!fader.dragging) fader.set(local[key]);
+      paintChannel(key);
     }
   }
 
-  /* ---------------- Пресеты ---------------- */
+  /* ---------------- Банк пресетов ---------------- */
 
-  function renderPresets() {
-    const root = $('presetChips');
+  function presetMeta(s) {
+    return `НАС ${Math.round(s.saturation)}% · ВИБ ${Math.round(s.vibrance)}%`;
+  }
+
+  function renderBank() {
+    const root = $('bank');
     root.textContent = '';
     const all = state.userPresets || [];
-    root.hidden = all.length === 0;
-    for (const p of all) {
-      const chip = el('button', { class: 'chip user' + (state.presetId === p.id ? ' on' : ''), title: 'Применить пресет' }, p.name);
-      chip.addEventListener('click', () => api.update({ presetId: p.id }).then(onState));
-      const x = el('span', { class: 'x', title: 'Удалить пресет' }, '×');
-      x.addEventListener('click', (e) => {
-        e.stopPropagation();
-        api.deletePreset(p.id).then(onState);
-      });
-      chip.append(x);
-      root.append(chip);
+    all.forEach((p, i) => {
+      const del = el('span', { class: 'slot-del', title: 'Удалить пресет' }, '×');
+      del.addEventListener('click', (e) => { e.stopPropagation(); api.deletePreset(p.id).then(onState); });
+      const slot = el('button', { class: 'slot' + (state.presetId === p.id ? ' on' : ''), title: 'Применить «' + p.name + '»' },
+        el('span', { class: 'slot-num' }, 'M' + String(i + 1).padStart(2, '0')),
+        el('span', { class: 'slot-name' }, p.name),
+        el('span', { class: 'slot-meta' }, presetMeta(CM.sanitize(p.settings))),
+        del);
+      slot.addEventListener('click', () => api.update({ presetId: p.id }).then(onState));
+      root.append(slot);
+    });
+
+    if (editingSlot) {
+      const input = el('input', { class: 'input', maxlength: '32', placeholder: 'Название пресета' });
+      const save = async () => {
+        const name = input.value.trim();
+        if (!name) { input.focus(); return; }
+        editingSlot = false;
+        onState(await api.savePreset(name));
+        toast(`Пресет «${name}» сохранён`);
+      };
+      const cancel = () => { editingSlot = false; renderBank(); };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); });
+      const box = el('div', { class: 'slot editing' }, input,
+        el('div', { class: 'slot-actions' },
+          el('button', { class: 'btn primary tiny', onclick: save }, 'Сохранить'),
+          el('button', { class: 'btn tiny', onclick: cancel }, 'Отмена')));
+      root.append(box);
+      setTimeout(() => input.focus(), 0);
+    } else {
+      const add = el('button', { class: 'slot add', title: 'Сохранить текущие значения микшера' },
+        el('span', { class: 'plus' }, '+'), el('span', {}, 'Сохранить текущие'));
+      add.addEventListener('click', () => { editingSlot = true; renderBank(); });
+      root.append(add);
     }
-    $('presetHint').textContent = all.length === 0
-      ? 'Пока пусто. Настройте ползунки под себя и нажмите «+ Сохранить свой».'
-      : (PR.findPreset(state.presetId, all) ? '' : 'Текущие настройки не сохранены — нажмите «+ Сохранить свой», чтобы не потерять.');
+
+    $('bankHint').textContent = all.length === 0
+      ? 'Пока пусто — настройте микшер под себя и сохраните.'
+      : (PR.findPreset(state.presetId, all) ? 'Клик — применить' : 'Текущие значения не сохранены');
   }
 
-  /* ---------------- Статус ---------------- */
+  /* ---------------- Верхняя панель ---------------- */
 
-  function renderStatus() {
-    const card = $('statusCard');
+  function renderState() {
     const preset = PR.findPreset(state.presetId, state.userPresets);
     const waiting = state.enabled && !state.active && !state.peek;
-    card.classList.toggle('off', !state.enabled);
-    card.classList.toggle('waiting', waiting);
-    $('btnPower').setAttribute('aria-pressed', String(state.enabled));
-    $('powerText').textContent = state.enabled ? 'ВКЛ' : 'ВЫКЛ';
-    $('statusLabel').textContent = !state.enabled ? 'ВЫКЛЮЧЕНО'
-      : state.peek ? 'СТОК — ПРОСМОТР'
-      : waiting ? 'ОЖИДАНИЕ ИГРЫ' : 'АКТИВНО';
-    $('statusTitle').textContent = preset ? preset.name : 'Свои настройки';
+    const box = $('stateBox');
+    box.classList.toggle('off', !state.enabled);
+    box.classList.toggle('wait', waiting);
+    $('stateMain').textContent = !state.enabled ? 'ЭФФЕКТ ВЫКЛЮЧЕН'
+      : state.peek ? 'ПОКАЗАН СТОК'
+      : waiting ? 'ЖДЁТ ИГРУ' : 'ЭФФЕКТ АКТИВЕН';
     const where = state.scope === 'everywhere'
       ? 'Везде'
-      : (state.apps.length ? 'В играх: ' + state.apps.slice(0, 2).join(', ') + (state.apps.length > 2 ? ` +${state.apps.length - 2}` : '') : 'Список игр пуст');
-    $('statusSub').textContent = where + (preset ? ' · Пресет ' + preset.name : '');
+      : (state.apps.length ? state.apps.slice(0, 2).join(', ') + (state.apps.length > 2 ? ` +${state.apps.length - 2}` : '') : 'Список игр пуст');
+    $('stateSub').textContent = where + (preset ? ' · ' + preset.name : '');
+    $('btnPower').setAttribute('aria-checked', String(state.enabled));
+    const led = $('railLed');
+    led.classList.toggle('on', state.enabled && state.active);
+    led.classList.toggle('wait', waiting);
+    $('appVersion').textContent = state.version && state.version !== 'web' ? 'v' + state.version : '';
   }
 
-  function renderEngine() {
-    const e = state.engine;
-    const pill = $('enginePill');
-    const list = $('engineList');
+  function renderPreviewNote() {
+    const live = api.isDesktop && !state.engine.simulated && state.active;
+    $('previewNote').textContent = live
+      ? 'Эффект уже наложен на весь экран — зажмите «Сток» вверху, чтобы сравнить вживую.'
+      : 'Вибрация здесь приблизительная — на экране её делает драйвер.';
+  }
+
+  /* ---------------- Игры ---------------- */
+
+  function renderGames() {
+    document.querySelectorAll('#scopeOptions .option').forEach((o) => o.classList.toggle('on', o.dataset.scope === state.scope));
+    $('appsPanel').classList.toggle('disabled', state.scope !== 'apps');
+    const list = $('appList');
     list.textContent = '';
-    pill.classList.remove('ok', 'warn', 'off');
-
-    if (e.simulated) {
-      pill.classList.add('warn');
-      $('enginePillText').textContent = api.isDesktop ? 'режим предпросмотра' : 'веб-демо';
-      list.append(el('li', { class: 'warn' }, el('span', { class: 'dot' }),
-        el('div', {}, el('b', {}, api.isDesktop ? 'Движок доступен только в Windows' : 'Это веб-демо'),
-          el('div', { class: 'desc' }, 'Ползунки работают. Чтобы цвета менялись на всём экране, запустите QWECOLORS для Windows.'))));
-      return;
+    const fg = state.foreground && state.foreground.exe ? state.foreground.exe.toLowerCase() : null;
+    for (const a of state.apps) {
+      const live = state.scope === 'apps' && fg === a.toLowerCase();
+      const del = el('button', { class: 'app-del', title: 'Убрать из списка' }, '×');
+      del.addEventListener('click', () => api.update({ apps: state.apps.filter((x) => x !== a) }).then(onState));
+      list.append(el('div', { class: 'app-row' },
+        el('span', { class: 'app-ico' }, a.slice(0, 1).toUpperCase()),
+        el('span', { class: 'app-exe' }, a),
+        el('span', { class: 'app-state' + (live ? ' live' : '') }, live ? '● АКТИВНА' : 'ОЖИДАНИЕ'),
+        del));
     }
-
-    const items = [
-      { ok: e.matrix.ok, title: 'Цветовая матрица Windows', desc: e.matrix.error || 'Насыщенность до 300% для всего рабочего стола и игр в оконном/безрамочном режиме' },
-      {
-        ok: e.gamma.ok, warn: e.gamma.mode === 'fallback' && e.gamma.ok,
-        title: `Гамма-рампа видеокарты · ${e.gamma.monitors} монитор(ов)`,
-        desc: e.gamma.error || 'Тени, контраст, яркость и температура — работает и в полноэкранных играх',
-      },
-      {
-        ok: e.vibrance.ok, warn: !e.vibrance.vendor,
-        title: e.vibrance.vendor ? `Вибрация драйвера · ${e.vibrance.vendor}` : 'Вибрация драйвера',
-        desc: e.vibrance.error || 'Цифровая вибрация через драйвер — как в панели управления видеокартой',
-      },
-    ];
-    let worst = 'ok';
-    for (const it of items) {
-      const cls = it.warn ? 'warn' : it.ok ? 'ok' : 'err';
-      if (cls === 'err') worst = 'off'; else if (cls === 'warn' && worst === 'ok') worst = 'warn';
-      list.append(el('li', { class: cls }, el('span', { class: 'dot' }), el('div', {}, el('b', {}, it.title), el('div', { class: 'desc' }, it.desc))));
-    }
-    pill.classList.add(worst);
-    $('enginePillText').textContent = worst === 'ok' ? 'движок готов' : worst === 'warn' ? 'частично' : 'ошибка движка';
+    if (!state.apps.length) list.append(el('div', { class: 'app-empty' }, 'Список пуст. Добавьте exe игры — эффект будет включаться только в ней.'));
+    $('fgInfo').textContent = state.scope === 'apps' && state.foreground && state.foreground.exe
+      ? `Сейчас: ${state.foreground.exe} — ${state.foreground.inScope ? 'эффект включён' : 'на паузе'}`
+      : '';
   }
 
-  function renderSettings() {
-    for (const b of $('scopeSeg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.scope === state.scope);
-    $('appsBox').hidden = state.scope !== 'apps';
-    const chips = $('appChips');
-    chips.textContent = '';
-    const fgExe = state.foreground && state.foreground.exe ? state.foreground.exe.toLowerCase() : null;
-    for (const a of state.apps) {
-      const rm = el('button', { title: 'Убрать' }, '×');
-      rm.addEventListener('click', () => api.update({ apps: state.apps.filter((x) => x !== a) }).then(onState));
-      chips.append(el('span', { class: 'app-chip' + (fgExe === a.toLowerCase() ? ' live' : '') }, a, rm));
-    }
-    if (!state.apps.length) chips.append(el('span', { class: 'muted small' }, 'Добавьте exe игры — эффект будет включаться только в ней.'));
-    $('fgInfo').textContent = state.scope === 'apps' && state.foreground && state.foreground.exe
-      ? `Сейчас активно: ${state.foreground.exe} — ${state.foreground.inScope ? 'эффект включён' : 'эффект на паузе'}`
-      : '';
+  /* ---------------- Система ---------------- */
 
+  function renderSystem() {
     $('optAutostart').checked = state.autostart;
     $('optStartMin').checked = state.startMinimized;
     $('optTray').checked = state.closeToTray;
     $('optHotkeys').checked = state.hotkeys;
     $('btnUnlockGamma').hidden = !(api.isDesktop && state.engine.platform === 'win32');
+    $('btnQuit').hidden = !api.isDesktop;
+
+    const e = state.engine;
+    const list = $('engineList');
+    const badge = $('engineBadge');
+    list.textContent = '';
+    badge.className = 'rail-badge';
+
+    const row = (cls, label, title, desc) => list.append(el('div', { class: 'module' },
+      el('b', {}, title), el('span', { class: 'st ' + cls }, label), el('div', { class: 'desc' }, desc)));
+
+    if (e.simulated) {
+      row('warn', 'ДЕМО', api.isDesktop ? 'Движок доступен только в Windows' : 'Это веб-демо',
+        'Микшер и предпросмотр работают. Чтобы цвета менялись на всём экране, запустите QWECOLORS для Windows.');
+      $('engineSummary').textContent = 'режим предпросмотра';
+      badge.classList.add('warn');
+      return;
+    }
+
+    const items = [
+      { st: e.matrix.ok ? 'ok' : 'err', title: 'Цветовая матрица Windows',
+        desc: e.matrix.error || 'Насыщенность до 300% — рабочий стол и игры в оконном / безрамочном режиме' },
+      { st: !e.gamma.ok ? 'err' : e.gamma.mode === 'fallback' ? 'warn' : 'ok',
+        title: `Гамма-рампа видеокарты · мониторов: ${e.gamma.monitors}`,
+        desc: e.gamma.error || 'Тени, подъём теней, контраст, яркость и температура — работает и в полноэкранных играх' },
+      { st: !e.vibrance.vendor ? 'warn' : e.vibrance.ok ? 'ok' : 'err',
+        title: e.vibrance.vendor ? `Вибрация драйвера · ${e.vibrance.vendor}` : 'Вибрация драйвера',
+        desc: e.vibrance.error || 'Цифровая вибрация через драйвер — как в панели управления видеокарты' },
+    ];
+    const label = { ok: 'ГОТОВ', warn: 'ЧАСТИЧНО', err: 'ОШИБКА' };
+    let worst = 'ok';
+    for (const it of items) {
+      if (it.st === 'err') worst = 'err'; else if (it.st === 'warn' && worst === 'ok') worst = 'warn';
+      row(it.st, label[it.st], it.title, it.desc);
+    }
+    if (worst !== 'ok') badge.classList.add(worst);
+    $('engineSummary').textContent = worst === 'ok' ? 'всё работает' : worst === 'warn' ? 'работает частично' : 'есть ошибки';
   }
 
-  function renderPreviewNote() {
-    const base = 'Тяните картинку, чтобы сравнить. Вибрация здесь аппроксимирована — в приложении её делает драйвер видеокарты.';
-    const extra = api.isDesktop && !state.engine.simulated && state.active
-      ? ' Сейчас эффект уже наложен на весь экран, включая это окно, — зажмите «Удерживайте — сток», чтобы увидеть разницу вживую.'
-      : '';
-    $('previewNote').textContent = base + extra;
-  }
+  /* ---------------- Состояние ---------------- */
 
   function onState(s) {
     if (!s) return;
     state = s;
-    // Не перебиваем значения, пока пользователь тянет ползунок
-    const dragging = SLIDERS.some((d) => inputs[d.key].input.matches(':active'));
+    const dragging = Object.values(channels).some((c) => c.fader.dragging);
     if (!dragging && !sendTimer) {
       local = CM.sanitize(s.settings);
-      syncSliders();
+      syncMixer();
       preview.render(local);
     }
-    $('appVersion').textContent = s.version && s.version !== 'web' ? 'v' + s.version : '';
-    renderStatus();
-    renderPresets();
-    renderEngine();
-    renderSettings();
+    renderState();
+    renderBank();
+    renderGames();
+    renderSystem();
     renderPreviewNote();
   }
 
   /* ---------------- События ---------------- */
 
   function bind() {
+    document.querySelectorAll('.rail-btn').forEach((b) => b.addEventListener('click', () => showView(b.dataset.view)));
+
     $('btnMin').addEventListener('click', () => api.minimize());
     $('btnMax').addEventListener('click', () => api.toggleMaximize());
     $('btnClose').addEventListener('click', () => api.close());
-    document.querySelector('.titlebar').addEventListener('dblclick', (e) => {
-      if (!e.target.closest('button, .engine-pill')) api.toggleMaximize();
+    document.querySelector('.topbar').addEventListener('dblclick', (e) => {
+      if (!e.target.closest('button')) api.toggleMaximize();
     });
 
     $('btnPower').addEventListener('click', () => api.update({ enabled: !state.enabled }).then(onState));
 
-    // «Удерживайте — сток»
+    // «Сток» — пока зажато, экран без эффекта
     const peekBtn = $('btnPeek');
     let peeking = false;
     const peek = (on) => {
@@ -279,7 +339,15 @@
     peekBtn.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') peek(true); });
     peekBtn.addEventListener('keyup', () => peek(false));
 
-    // Источник предпросмотра
+    // Режим сравнения
+    $('compareMode').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      $('compareMode').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+      preview.setMode(b.dataset.mode);
+    });
+
+    // Источник картинки
     const seg = $('previewSource');
     const setSeg = (src) => seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.src === src));
     seg.addEventListener('click', async (e) => {
@@ -304,25 +372,12 @@
       $('fileInput').value = '';
     });
 
-    // Сохранение пресета
-    const row = $('savePresetRow');
-    $('btnSavePreset').addEventListener('click', () => { row.hidden = false; $('presetName').focus(); });
-    $('btnSavePresetCancel').addEventListener('click', () => { row.hidden = true; });
-    const savePreset = async () => {
-      const name = $('presetName').value.trim();
-      if (!name) { $('presetName').focus(); return; }
-      onState(await api.savePreset(name));
-      $('presetName').value = '';
-      row.hidden = true;
-      toast(`Пресет «${name}» сохранён`);
-    };
-    $('btnSavePresetOk').addEventListener('click', savePreset);
-    $('presetName').addEventListener('keydown', (e) => { if (e.key === 'Enter') savePreset(); if (e.key === 'Escape') row.hidden = true; });
+    $('btnReset').addEventListener('click', async () => { onState(await api.resetAll()); toast('Сброшено в сток'); });
 
-    // Область
-    $('scopeSeg').addEventListener('click', (e) => {
-      const b = e.target.closest('button');
-      if (b) api.update({ scope: b.dataset.scope }).then(onState);
+    // Игры
+    $('scopeOptions').addEventListener('click', (e) => {
+      const o = e.target.closest('.option');
+      if (o) api.update({ scope: o.dataset.scope }).then(onState);
     });
     const addApp = (name) => {
       let n = String(name || '').trim().split(/[\\/]/).pop();
@@ -331,7 +386,9 @@
       if (state.apps.some((a) => a.toLowerCase() === n.toLowerCase())) { toast('Уже в списке'); return; }
       api.update({ apps: state.apps.concat([n]) }).then(onState);
     };
-    $('appInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { addApp($('appInput').value); $('appInput').value = ''; } });
+    $('appInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { addApp($('appInput').value); $('appInput').value = ''; }
+    });
     $('btnPickApp').addEventListener('click', async () => {
       if (!api.isDesktop) { toast('Доступно в приложении для Windows'); return; }
       const btn = $('btnPickApp');
@@ -346,29 +403,25 @@
       if (exe) { addApp(exe); toast(`Добавлено: ${exe}`); } else toast('Не удалось определить окно');
     });
 
-    // Переключатели
+    // Система
     $('optAutostart').addEventListener('change', (e) => api.update({ autostart: e.target.checked }).then(onState));
     $('optStartMin').addEventListener('change', (e) => api.update({ startMinimized: e.target.checked }).then(onState));
     $('optTray').addEventListener('change', (e) => api.update({ closeToTray: e.target.checked }).then(onState));
     $('optHotkeys').addEventListener('change', (e) => api.update({ hotkeys: e.target.checked }).then(onState));
-
     $('btnUnlockGamma').addEventListener('click', async () => {
       const r = await api.unlockGamma();
       msg($('settingsMsg'), r.ok ? 'Готово. Перезагрузите компьютер, чтобы Windows разрешила полный диапазон гаммы.' : r.error, r.ok);
     });
-    $('btnReset').addEventListener('click', async () => { onState(await api.resetAll()); toast('Сброшено в сток'); });
     $('btnQuit').addEventListener('click', () => api.quit());
-    $('btnQuit').hidden = !api.isDesktop;
   }
 
   /* ---------------- Старт ---------------- */
 
   async function start() {
     preview = new window.QWEPreview({
-      compare: $('compare'), before: $('canvasBefore'), after: $('canvasAfter'),
-      line: $('compareLine'), loading: $('compareLoading'),
+      compare: $('compare'), before: $('canvasBefore'), after: $('canvasAfter'), loading: $('compareLoading'),
     });
-    buildSliders();
+    buildMixer();
     bind();
     api.onState(onState);
     onState(await api.getState());

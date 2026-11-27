@@ -1,7 +1,7 @@
 {
   "name": "qwecolors",
   "productName": "QWECOLORS",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "QWECOLORS — насыщенность до 300%, цифровая вибрация, тени и цветовая температура по всему экрану Windows",
   "main": "src/main/main.js",
   "author": "QWEES1DE",

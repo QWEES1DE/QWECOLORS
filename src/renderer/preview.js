@@ -1,5 +1,5 @@
 /*
- * Предпросмотр «СТОК | QWECOLORS» с перетаскиваемым разделителем.
+ * Предпросмотр «ДО / ПОСЛЕ»: режимы «Сплит», «До», «После».
  * Обработка — та же цветовая математика, что и в движке (shared/colormath.js).
  */
 (function () {
@@ -8,41 +8,52 @@
   const MAX_W = 1120;
 
   class Preview {
-    constructor({ compare, before, after, line, loading }) {
+    constructor({ compare, before, after, loading }) {
       this.compare = compare;
       this.before = before;
       this.after = after;
       this.loading = loading;
-      this.source = null;     // ImageData исходника
+      this.source = null;
       this.settings = CM.neutralSettings();
       this.pending = false;
       this.x = 0.5;
+      this.setMode('split');
       this._bindDrag();
+    }
+
+    setMode(mode) {
+      this.mode = mode;
+      this.compare.dataset.mode = mode;
+    }
+
+    _setX(x) {
+      this.x = Math.min(1, Math.max(0, x));
+      this.compare.style.setProperty('--x', (this.x * 100).toFixed(2) + '%');
     }
 
     _bindDrag() {
       let dragging = false;
-      const setX = (clientX) => {
+      const fromEvent = (e) => {
         const r = this.compare.getBoundingClientRect();
-        this.x = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
-        this.compare.style.setProperty('--x', (this.x * 100).toFixed(2) + '%');
+        this._setX((e.clientX - r.left) / r.width);
       };
       this.compare.addEventListener('pointerdown', (e) => {
+        if (this.mode !== 'split') return;
         dragging = true;
         this.compare.setPointerCapture(e.pointerId);
-        setX(e.clientX);
+        fromEvent(e);
       });
-      this.compare.addEventListener('pointermove', (e) => { if (dragging) setX(e.clientX); });
+      this.compare.addEventListener('pointermove', (e) => { if (dragging) fromEvent(e); });
       const stop = () => { dragging = false; };
       this.compare.addEventListener('pointerup', stop);
       this.compare.addEventListener('pointercancel', stop);
-      this.compare.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-          this.x = Math.min(1, Math.max(0, this.x + (e.key === 'ArrowLeft' ? -0.05 : 0.05)));
-          this.compare.style.setProperty('--x', (this.x * 100).toFixed(2) + '%');
-        }
-      });
       this.compare.tabIndex = 0;
+      this.compare.addEventListener('keydown', (e) => {
+        if (this.mode !== 'split') return;
+        if (e.key === 'ArrowLeft') this._setX(this.x - 0.05);
+        if (e.key === 'ArrowRight') this._setX(this.x + 0.05);
+      });
+      this._setX(0.5);
     }
 
     /** Загружает картинку (URL / dataURL), кадрирует в 16:9. */
@@ -52,12 +63,12 @@
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
-          const targetRatio = 16 / 9;
+          const ratio = 16 / 9;
           let sw = img.naturalWidth, sh = img.naturalHeight, sx = 0, sy = 0;
-          if (sw / sh > targetRatio) { const nw = sh * targetRatio; sx = (sw - nw) / 2; sw = nw; }
-          else { const nh = sw / targetRatio; sy = (sh - nh) / 2; sh = nh; }
+          if (sw / sh > ratio) { const nw = sh * ratio; sx = (sw - nw) / 2; sw = nw; }
+          else { const nh = sw / ratio; sy = (sh - nh) / 2; sh = nh; }
           const w = Math.min(MAX_W, Math.round(sw));
-          const h = Math.round(w / targetRatio);
+          const h = Math.round(w / ratio);
           for (const c of [this.before, this.after]) { c.width = w; c.height = h; }
           const ctx = this.before.getContext('2d', { willReadFrequently: true });
           ctx.imageSmoothingQuality = 'high';
@@ -75,7 +86,6 @@
       });
     }
 
-    /** Перерисовать обработанную половину (с объединением частых вызовов в один кадр). */
     render(settings, immediate) {
       this.settings = settings;
       if (!this.source) return;

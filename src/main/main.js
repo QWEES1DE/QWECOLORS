@@ -4,19 +4,34 @@ const fs = require('fs');
 const { execFile } = require('child_process');
 const {
   app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut,
-  screen, powerMonitor, desktopCapturer, shell, clipboard,
+  screen, powerMonitor, desktopCapturer, shell,
 } = require('electron');
 
 const { Store } = require('./store');
 const { ColorEngine } = require('./engine');
 const CM = require('../shared/colormath');
-const { PRESETS, findPreset, matchPreset } = require('../shared/presets');
+const { findPreset, matchPreset } = require('../shared/presets');
 
 app.setAppUserModelId('com.qwees1de.qwecolors');
 
-if (!app.requestSingleInstanceLock()) {
+// Путь к «настоящему» exe (у portable-версии process.execPath указывает во временную папку)
+const LAUNCH_EXE = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+
+if (!app.requestSingleInstanceLock({ version: app.getVersion(), exe: LAUNCH_EXE })) {
+  // Уже запущена копия. Если она старее — она сама закроется и перезапустит эту (новую) версию.
   app.quit();
   process.exit(0);
+}
+
+/** Сравнение версий вида 1.2.3: >0 если a новее b */
+function compareVersions(a, b) {
+  const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
 }
 
 const ASSETS = path.join(__dirname, '..', 'assets');
@@ -213,7 +228,7 @@ function updateTray() {
   tray.setImage(trayIcon(active));
   const preset = findPreset(d.presetId, d.userPresets);
   tray.setToolTip(`QWECOLORS — ${d.enabled ? 'включено' : 'выключено'}${preset ? ' · ' + preset.name : ''}`);
-  const presetItems = PRESETS.concat(d.userPresets).map((p) => ({
+  const presetItems = d.userPresets.map((p) => ({
     label: p.name, type: 'radio', checked: d.presetId === p.id,
     click: () => update({ presetId: p.id }),
   }));
@@ -221,7 +236,7 @@ function updateTray() {
     { label: 'QWECOLORS', enabled: false },
     { type: 'separator' },
     { label: d.enabled ? 'Выключить  (Ctrl+Alt+Q)' : 'Включить  (Ctrl+Alt+Q)', click: () => update({ enabled: !d.enabled }) },
-    { label: 'Пресеты', submenu: presetItems },
+    ...(presetItems.length ? [{ label: 'Мои пресеты', submenu: presetItems }] : []),
     { label: 'Открыть', click: showWindow },
     { type: 'separator' },
     { label: 'Выход', click: () => { quitting = true; app.quit(); } },
@@ -230,7 +245,8 @@ function updateTray() {
 
 function cyclePreset(dir) {
   const d = store.get();
-  const all = PRESETS.concat(d.userPresets);
+  const all = d.userPresets;
+  if (!all.length) return;
   const idx = all.findIndex((p) => p.id === d.presetId);
   const next = all[(idx + dir + all.length) % all.length];
   update({ presetId: next.id });
@@ -317,11 +333,8 @@ function registerIpc() {
   });
 
   ipcMain.handle('system:resetAll', () => {
-    return update({ presetId: 'natural' });
+    return update({ settings: CM.neutralSettings(), presetId: null });
   });
-
-  ipcMain.handle('clipboard:write', (_e, text) => { clipboard.writeText(String(text || '')); return true; });
-  ipcMain.handle('clipboard:read', () => clipboard.readText());
 
   ipcMain.on('window:minimize', () => win && win.minimize());
   ipcMain.on('window:toggleMaximize', () => { if (!win) return; if (win.isMaximized()) win.unmaximize(); else win.maximize(); });
@@ -333,7 +346,20 @@ function registerIpc() {
 /* Жизненный цикл                                                     */
 /* ------------------------------------------------------------------ */
 
-app.on('second-instance', showWindow);
+app.on('second-instance', (_e, _argv, _cwd, data) => {
+  // Запустили более новую версию, пока старая сидит в трее, — уступаем место новой
+  if (data && data.version && data.exe && compareVersions(data.version, app.getVersion()) > 0) {
+    log(`обнаружена новая версия ${data.version} (${data.exe}) — перезапуск`);
+    try { store && store.saveNow(); } catch (_) { /* ignore */ }
+    try { engine && engine.shutdown(); } catch (_) { /* ignore */ }
+    globalShortcut.unregisterAll();
+    app.relaunch({ execPath: data.exe, args: [] });
+    quitting = true;
+    app.exit(0);
+    return;
+  }
+  showWindow();
+});
 
 app.whenReady().then(() => {
   const dir = app.getPath('userData');

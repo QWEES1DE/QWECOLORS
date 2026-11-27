@@ -11,12 +11,12 @@
 
   const CM = window.QWEColorMath;
   const PR = window.QWEPresets;
-  const KEY = 'qwecolors-demo-state';
+  const KEY = 'qwecolors-demo-state-v2';
   const listeners = new Set();
 
   const defaults = {
-    enabled: true, presetId: 'robrun', settings: { ...PR.PRESETS[0].settings }, userPresets: [],
-    scope: 'everywhere', apps: ['RobloxPlayerBeta.exe'], autostart: false, startMinimized: false,
+    enabled: true, presetId: null, settings: CM.neutralSettings(), userPresets: [],
+    scope: 'everywhere', apps: [], autostart: false, startMinimized: false,
     closeToTray: true, hotkeys: true,
   };
   let data;
@@ -89,10 +89,8 @@
     captureScreen,
     pickForeground: async () => null,
     unlockGamma: async () => ({ ok: false, error: 'Доступно только в приложении для Windows' }),
-    resetAll: async () => update({ presetId: 'natural' }),
+    resetAll: async () => update({ settings: CM.neutralSettings(), presetId: null }),
     peek: async () => true,
-    copy: async (t) => { try { await navigator.clipboard.writeText(t); return true; } catch (_) { return false; } },
-    paste: async () => { try { return await navigator.clipboard.readText(); } catch (_) { return ''; } },
     minimize() {}, toggleMaximize() {}, close() {}, quit() {},
     onState: (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
   };

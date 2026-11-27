@@ -12,8 +12,6 @@ contextBridge.exposeInMainWorld('qwe', {
   unlockGamma: () => ipcRenderer.invoke('system:unlockGamma'),
   resetAll: () => ipcRenderer.invoke('system:resetAll'),
   peek: (on) => ipcRenderer.invoke('engine:peek', !!on),
-  copy: (text) => ipcRenderer.invoke('clipboard:write', text),
-  paste: () => ipcRenderer.invoke('clipboard:read'),
   minimize: () => ipcRenderer.send('window:minimize'),
   toggleMaximize: () => ipcRenderer.send('window:toggleMaximize'),
   close: () => ipcRenderer.send('window:close'),
